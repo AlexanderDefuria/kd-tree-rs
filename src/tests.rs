@@ -49,13 +49,47 @@ mod tests {
 
         let node: KdNode<i32> = KdNode::build(points, 1);
 
-        match node {
-            Node { point, dim, .. } => {
-                assert_eq!(dim, Dim::X);
-                assert_eq!(point, Point { x: 4, y: 9 }, "Expected P4");
-            },
-            Empty => assert!(false, "Expected KdNode::Node"),
-        }
+        assert_eq!(node, Node {
+            point: Point { x: 4, y: 9 },
+            dim: Dim::X,
+            right: Box::new(Node {
+                point: Point { x: 3, y: 6 },
+                dim: Dim::Y,
+                left: Box::new(Node {
+                    point: Point { x: 1, y: 8 },
+                    dim: Dim::X,
+                    left: Box::new(Empty),
+                    right: Box::new(Empty)
+                }),
+                right: Box::new(Node {
+                    point: Point { x: 2, y: 2 },
+                    dim: Dim::X,
+                    left: Box::new(Empty),
+                    right: Box::new(Empty)
+                })
+            }),
+            left: Box::new(Node {
+                point: Point { x: 7, y: 3 },
+                dim: Dim::Y,
+                right: Box::new( Node {
+                    point: Point { x: 9, y: 1 },
+                    dim: Dim::X,
+                    left: Box::new(KdNode::Empty),
+                    right: Box::new(KdNode::Empty)
+                }),
+                left: Box::new(Node {
+                    point: Point { x: 8, y: 8 },
+                    dim: Dim::X,
+                    right: Box::new(KdNode::Empty),
+                    left: Box::new(Node {
+                        point: Point { x: 9, y: 9 },
+                        dim: Dim::Y,
+                        left: Box::new(KdNode::Empty),
+                        right: Box::new(KdNode::Empty)
+                    })
+                })
+            })
+        })
     }
 
     #[test]

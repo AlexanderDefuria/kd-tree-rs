@@ -94,21 +94,28 @@ impl<T: PartialEq + PartialOrd> KdNode<T> {
 
         self
     }
+
+    fn nearest_neighbor_radius(&self, radius: T) -> Vec<Point<T>> {
+        unimplemented!("Not implemented")
+    }
 }
 
 impl<T: PartialEq + PartialOrd + Clone> KdNode<T> {
     fn build( points: Vec<Point<T>>, depth: usize) -> Self {
+        // Increment the dimension
+        let next_depth: usize = depth + 1;
+
+        // End recursion if there are one or no points
         if points.is_empty() {
             return Empty;
         } else if points.len() == 1 {
             return Node {
                 point: points[0].clone(),
-                dim: Dim::X,
+                dim: Dim::from_depth(next_depth),
                 left: Box::new(Empty),
                 right: Box::new(Empty),
             };
         }
-        let next_depth: usize = depth + 1;
 
         // Choose axis
         let axis = Dim::from_depth(next_depth);
