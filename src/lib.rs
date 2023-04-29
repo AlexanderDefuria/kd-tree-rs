@@ -1,68 +1,136 @@
 mod tests;
 
-use crate::Dim::{X, Y};
 use std::cmp::Ordering;
-use std::cmp::PartialOrd;
-use std::ops::Div;
+use crate::KdNode::{Empty, Node};
 
-struct KdNode<T> {
-    point: Point<T>,
-    left: Box<KdNode<T>>,
-    right: Box<KdNode<T>>,
+#[derive(Debug, PartialEq)]
+enum KdNode<T: PartialEq> {
+    Empty,
+    Node {
+        point: Point<T>,
+        dim: Dim,
+        left: Box<KdNode<T>>,
+        right: Box<KdNode<T>>,
+    }
 }
 
-#[derive(Debug, PartialOrd, PartialEq, Clone)]
-struct Point<T> {
+#[derive(Debug, PartialEq, Copy, Clone)]
+struct Point<T: PartialEq> {
     x: T,
-    y: T,
+    y: T
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, PartialEq)]
 enum Dim {
     X,
     Y,
 }
 
-fn split_point_set<T: Clone>(
-    q: usize,
-    dim: Dim,
-    point_set: &Vec<Point<T>>,
-) -> (Vec<Point<T>>, Vec<Point<T>>) {
-    if point_set.is_empty() {
-        panic!("Empty point set");
+
+impl Dim {
+    const DIMENSIONS: usize = 2;
+
+    fn from_depth(mut n: usize) -> Dim {
+        n = n.rem_euclid(Dim::DIMENSIONS);
+        assert!(n < Dim::DIMENSIONS);
+        match n {
+            0 => Dim::X,
+            1 => Dim::Y,
+            _ => panic!("Higher dimensions not implemented")
+        }
     }
-
-    let mut out: (Vec<Point<T>>, Vec<Point<T>>) = (vec![], vec![]);
-    out.0 = point_set[0..q].to_owned();
-    out.1 = point_set[q..point_set.len()].to_owned();
-
-    return out;
 }
 
-fn median_of_points<T: Ord>(dim: Dim, point_set: &mut Vec<Point<T>>) -> (&Point<T>, usize) {
-    if point_set.is_empty() {
-        panic!("Empty point set");
+impl<T: PartialEq + PartialOrd> Point<T> {
+    fn gt(&self, rs: &Point<T>, dim: &Dim) -> bool {
+        match dim {
+            Dim::X => self.x > rs.x,
+            Dim::Y => self.y > rs.y,
+        }
     }
-    point_set.sort_by(|a, b| match dim {
-        X => a.x.cmp(&b.x),
-        Y => a.y.cmp(&b.y),
-    });
 
-    let q: usize = point_set.len() / 2;
+    fn cmp(&self, rs: &Point<T>, dim: &Dim) -> Ordering {
+        let ls_value: &T = self.get_dim_value(dim);
+        let rs_value: &T = rs.get_dim_value(dim);
+        ls_value.partial_cmp(&rs_value).unwrap()
+    }
 
-    return (point_set.get(q).unwrap(), q);
+    fn get_dim_value(&self, dim: &Dim) -> &T {
+        match dim {
+            Dim::X => &self.x,
+            Dim::Y => &self.y,
+        }
+    }
 }
 
-fn build<T: Ord + Clone>(mut point_set: Vec<Point<T>>) -> KdNode<T> {
-    let dim: Dim = Y;
-    let q: (&Point<T>, usize) = median_of_points(dim, &mut point_set);
-    let mut split: (Vec<Point<T>>, Vec<Point<T>>) = split_point_set(q.1, dim, &point_set);
-    let mut l_node: KdNode<T> = build(split.0);
-    let mut r_node: KdNode<T> = build(split.1);
+impl<T: PartialEq + PartialOrd> KdNode<T> {
+    fn new() -> Self {
+        Empty
+    }
 
-    KdNode {
-        point: q.0.clone(),
-        left: Box::new(l_node),
-        right: Box::new(r_node),
+    fn insert(&mut self, item: Point<T>) -> &Self {
+        self._insert(item, 0);
+        return self;
+    }
+
+    fn _insert(&mut self, item: Point<T>, depth: usize) -> &Self {
+        *self = match self {
+            Empty => Node {
+                point: item,
+                dim: Dim::from_depth(depth),
+                left: Box::new(Empty),
+                right: Box::new(Empty),
+            },
+            Node {point, left, right, ..} => {
+                let next_depth: usize = depth + 1;
+                if point.gt(&item, &Dim::from_depth(next_depth)) {
+                    right._insert(item, next_depth);
+                } else {
+                    left._insert(item, next_depth);
+                }
+                return self
+            },
+        };
+
+        self
+    }
+}
+
+impl<T: PartialEq + PartialOrd + Clone> KdNode<T> {
+    fn build( points: Vec<Point<T>>, depth: usize) -> Self {
+        if points.is_empty() {
+            return Empty;
+        } else if points.len() == 1 {
+            return Node {
+                point: points[0].clone(),
+                dim: Dim::X,
+                left: Box::new(Empty),
+                right: Box::new(Empty),
+            };
+        }
+        let next_depth: usize = depth + 1;
+
+        // Choose axis
+        let axis = Dim::from_depth(next_depth);
+
+        // Get Median
+        let (median, left, right): (Point<T>, Vec<Point<T>>, Vec<Point<T>>)
+            = KdNode::_split_on_median(points, &axis);
+
+        Node {
+            point: median,
+            dim: axis,
+            left: Box::from(Self::build(left, next_depth)),
+            right: Box::from(Self::build(right, next_depth)),
+        }
+    }
+
+    fn _split_on_median(mut points: Vec<Point<T>>, axis: &Dim) -> (Point<T>, Vec<Point<T>>, Vec<Point<T>>) {
+        points.sort_by(|a: &Point<T>, b: &Point<T>| a.cmp(&b, &axis));
+        let median_index: usize = if points.len() % 2 == 0 { points.len() / 2 - 1 } else { points.len() / 2 };
+        let median: Point<T> = points[median_index].clone();
+        let right: Vec<Point<T>> = points.drain(..median_index).collect();
+        let left: Vec<Point<T>> = points.drain(1..).collect();
+        (median, left, right)
     }
 }
