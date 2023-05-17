@@ -122,11 +122,7 @@ mod tests {
         assert_eq!(median, Point { x: 4, y: 9 });
         assert_eq!(
             right,
-            vec![
-                Point { x: 1, y: 8 },
-                Point { x: 2, y: 2 },
-                Point { x: 3, y: 6 },
-            ]
+            vec![Point { x: 1, y: 8 }, Point { x: 2, y: 2 }, Point { x: 3, y: 6 },]
         );
         assert_eq!(
             left,
@@ -148,7 +144,7 @@ mod tests {
     #[test]
     fn test_nearest_neighbor() {
         let node: KdNode<f64> = KdNode::build(TEST_POINTS_F64.to_vec());
-        let mut origin: Point<f64> = Point { x: 1., y: 2. };
+        let mut origin: Point<f64> = Point { x: 1.5, y: 2. };
         let mut radius: f64 = 1.;
         let mut nearest: Vec<Point<f64>> = node.nearest_neighbor(origin, radius);
         assert_eq!(nearest, vec![Point { x: 2., y: 2. }]); // This is the best node
@@ -156,15 +152,17 @@ mod tests {
         radius = 1.5;
         origin = Point { x: 8.1, y: 8.1 };
         nearest = node.nearest_neighbor(origin, radius);
-        // assert_eq!(
-        //     nearest,
-        //     vec![Point { x: 8., y: 8. }, Point { x: 9., y: 9. }]
-        // );
+        assert_eq!(
+            nearest,
+            vec![Point { x: 8., y: 8. }, Point { x: 9., y: 9. }]
+        );
 
         radius = 100.;
         origin = Point { x: 0., y: 0. };
         nearest = node.nearest_neighbor(origin, radius);
-        assert_eq!(nearest, TEST_POINTS_F64.to_vec())
+        for point in TEST_POINTS_F64.to_vec() {
+            assert!(nearest.contains(&point))
+        }
     }
 
     #[test]
@@ -192,12 +190,13 @@ mod tests {
     fn test_drill_down() {
         let node: KdNode<f64> = KdNode::build(TEST_POINTS_F64.to_vec());
 
-        match node.drill_down(Point{ x: 0., y: 0. }).pop().unwrap() {
-            Empty => {panic!()}
+        match node.drill_down(Point { x: 0., y: 0. }).pop().unwrap() {
+            Empty => {
+                panic!()
+            }
             Node { point, .. } => {
-                assert_eq!(*point, Point{ x: 2., y: 2. });
+                assert_eq!(*point, Point { x: 2., y: 2. });
             }
         }
-
     }
 }

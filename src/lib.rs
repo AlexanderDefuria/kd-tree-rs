@@ -33,7 +33,7 @@ enum KdNode<T: KDT> {
     },
 }
 
-impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T>> KdNode<T> {
+impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::Debug> KdNode<T> {
     /// Create a new empty tree
     fn new() -> Self {
         Empty
@@ -76,43 +76,10 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T>> KdNode<T> {
     /// Find the nearest neighbors to the origin point
     fn nearest_neighbor<'a>(&self, origin: Point<T>, radius: f64) -> Vec<Point<T>> {
         let mut best_queue: Vec<(&KdNode<T>, f64)> = Vec::new();
-        let mut best_node: &KdNode<T> = self;
+        let mut parent_queue: Vec<&KdNode<T>> = self.drill_down(origin);
+        let deepest: &KdNode<T> = parent_queue.get(0).unwrap();
 
-        // Find the best leaf node.
-        let mut parents: Vec<&KdNode<T>> = self.drill_down(origin.clone());
-        best_node = parents[0];
-
-
-        // 4. Traverse the tree upwards from the leaf node
-        while let Some(parent) = parents.pop() {
-            match parent {
-                Empty => {
-                    break;
-                }
-                Node { point, left, right, .. } => {
-                    // 4.a. Put at proper point in the best_queue
-                    KdNode::insert_sorted(&mut best_queue, (parent, distance(&origin, point)));
-                    // 4.b. Check if there could be better points on the other side of the parent
-                    // This means check if the radius extends over the parent's split plane
-                    // 4.b.i. Check if the radius extends over the parent's split plane
-                    let (split_plane, split_plane_value, origin_value) = match parent {
-                        Node {
-                            dim: Dim::X, point, ..
-                        } => (Dim::X, point.x.into(), origin.x.into()),
-                        Node {
-                            dim: Dim::Y, point, ..
-                        } => (Dim::Y, point.y.into(), origin.y.into()),
-                        _ => panic!("Higher dimensions not implemented"),
-                    };
-
-
-
-                    // parents.push(parent);
-                    // parents.push(other_side);
-
-                }
-            }
-        }
+        deepest._nearest_neighbor(origin, radius, &mut best_queue, &mut parent_queue);
 
         best_queue.retain(|(_, dist)| *dist <= radius);
         return best_queue
@@ -124,6 +91,58 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T>> KdNode<T> {
             .collect();
     }
 
+    fn _nearest_neighbor<'a>(
+        &'a self,
+        origin: Point<T>,
+        radius: f64,
+        best_queue: &mut Vec<(&'a KdNode<T>, f64)>,
+        parent_queue: &mut Vec<&'a KdNode<T>>,
+    ) -> Vec<(&KdNode<T>, f64)> {
+        let parent = parent_queue.pop();
+        if parent.is_none() {
+            return best_queue.clone();
+        }
+
+        match parent.unwrap() {
+            Empty => {}
+            Node {
+                left,
+                right,
+                point,
+                dim,
+            } => {
+                // Add node point if in range.
+                let dis = distance(&origin, point);
+                if dis <= radius {
+                    KdNode::insert_sorted(best_queue, (parent.unwrap(), distance(&origin, point)));
+                }
+
+                for side_node in [left, right] {
+                    if !best_queue
+                        .iter()
+                        .find(|(a, _)| *a == side_node.as_ref())
+                        .is_some()
+                    {
+
+                        parent_queue.push(side_node.as_ref());
+                        let temp =
+                            side_node._nearest_neighbor(origin, radius, best_queue, parent_queue);
+                        for (node, dist) in temp {
+                            KdNode::insert_sorted(best_queue, (node, dist));
+                        }
+                    }
+                }
+
+                parent
+                    .unwrap()
+                    ._nearest_neighbor(origin, radius, best_queue, parent_queue);
+            }
+        }
+
+        best_queue.clone()
+    }
+
+    /// Drill down the tree to find appropriate node and return the parents.
     fn drill_down(&self, origin: Point<T>) -> Vec<&KdNode<T>> {
         let mut parents: Vec<&KdNode<T>> = Vec::new();
         let mut best_node: &KdNode<T> = self;
@@ -144,14 +163,21 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T>> KdNode<T> {
                 _ => best_node = right,
             }
         }
-        return parents
+        return parents;
     }
 
-    fn insert_sorted<'a>(points: &mut Vec<(&'a KdNode<T>, f64)>, point: (&'a KdNode<T>, f64)) {
+    /// Insert a point into a sorted list if it is not already in the list.
+    fn insert_sorted<'a>(
+        points: &mut Vec<(&'a KdNode<T>, f64)>,
+        point: (&'a KdNode<T>, f64),
+    ) -> () {
         let mut index: usize = 0;
-        for (i, (_, dist)) in points.iter().enumerate() {
+        for (i, (node, dist)) in points.iter().enumerate() {
             if *dist < point.1 {
                 index = i + 1;
+            }
+            if *node == point.0 && *node != &Empty {
+                return;
             }
         }
         points.insert(index, point);
