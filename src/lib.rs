@@ -1,73 +1,49 @@
+extern crate core;
+
+mod dim;
+mod point;
 mod tests;
 
-use std::cmp::Ordering;
+use crate::dim::Dim;
+use crate::point::{distance, Point};
 use crate::KdNode::{Empty, Node};
+use std::cmp::Ordering;
+use std::ops::{Add, Deref, Mul, Sub};
+
+trait KDT: PartialEq + PartialOrd + Copy + Mul + Sub + Add + Into<f64> {}
+impl<T> KDT for T where
+    T: PartialEq
+        + PartialOrd
+        + Copy
+        + Mul<Output = T>
+        + Sub<Output = T>
+        + Add<Output = T>
+        + Into<f64>
+{
+}
 
 #[derive(Debug, PartialEq)]
-enum KdNode<T: PartialEq> {
+enum KdNode<T: KDT> {
     Empty,
     Node {
         point: Point<T>,
         dim: Dim,
         left: Box<KdNode<T>>,
         right: Box<KdNode<T>>,
-    }
+    },
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-struct Point<T: PartialEq> {
-    x: T,
-    y: T
-}
-
-#[derive(Debug, PartialEq)]
-enum Dim {
-    X,
-    Y,
-}
-
-
-impl Dim {
-    const DIMENSIONS: usize = 2;
-
-    fn from_depth(mut n: usize) -> Dim {
-        n = n.rem_euclid(Dim::DIMENSIONS);
-        assert!(n < Dim::DIMENSIONS);
-        match n {
-            0 => Dim::X,
-            1 => Dim::Y,
-            _ => panic!("Higher dimensions not implemented")
-        }
-    }
-}
-
-impl<T: PartialEq + PartialOrd> Point<T> {
-    fn gt(&self, rs: &Point<T>, dim: &Dim) -> bool {
-        match dim {
-            Dim::X => self.x > rs.x,
-            Dim::Y => self.y > rs.y,
-        }
-    }
-
-    fn cmp(&self, rs: &Point<T>, dim: &Dim) -> Ordering {
-        let ls_value: &T = self.get_dim_value(dim);
-        let rs_value: &T = rs.get_dim_value(dim);
-        ls_value.partial_cmp(&rs_value).unwrap()
-    }
-
-    fn get_dim_value(&self, dim: &Dim) -> &T {
-        match dim {
-            Dim::X => &self.x,
-            Dim::Y => &self.y,
-        }
-    }
-}
-
-impl<T: PartialEq + PartialOrd> KdNode<T> {
+impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T>> KdNode<T> {
+    /// Create a new empty tree
     fn new() -> Self {
         Empty
     }
 
+    /// Insert a new item into the tree
+    ///
+    /// This should used sparingly as it can unbalance the tree
+    /// and reduce performance. If there is a large change to the dataset
+    /// it is better to create a new tree.
     fn insert(&mut self, item: Point<T>) -> &Self {
         self._insert(item, 0);
         return self;
@@ -81,27 +57,111 @@ impl<T: PartialEq + PartialOrd> KdNode<T> {
                 left: Box::new(Empty),
                 right: Box::new(Empty),
             },
-            Node {point, left, right, ..} => {
+            Node {
+                point, left, right, ..
+            } => {
                 let next_depth: usize = depth + 1;
                 if point.gt(&item, &Dim::from_depth(next_depth)) {
                     right._insert(item, next_depth);
                 } else {
                     left._insert(item, next_depth);
                 }
-                return self
-            },
+                return self;
+            }
         };
 
         self
     }
 
-    fn nearest_neighbor_radius(&self, radius: T) -> Vec<Point<T>> {
-        unimplemented!("Not implemented")
-    }
-}
+    /// Find the nearest neighbors to the origin point
+    fn nearest_neighbor<'a>(&self, origin: Point<T>, radius: f64) -> Vec<Point<T>> {
+        let mut best_queue: Vec<(&KdNode<T>, f64)> = Vec::new();
+        let mut best_node: &KdNode<T> = self;
 
-impl<T: PartialEq + PartialOrd + Clone> KdNode<T> {
-    fn build( points: Vec<Point<T>>, depth: usize) -> Self {
+        // Find the best leaf node.
+        let mut parents: Vec<&KdNode<T>> = self.drill_down(origin.clone());
+        best_node = parents[0];
+
+
+        // 4. Traverse the tree upwards from the leaf node
+        while let Some(parent) = parents.pop() {
+            match parent {
+                Empty => {
+                    break;
+                }
+                Node { point, left, right, .. } => {
+                    // 4.a. Put at proper point in the best_queue
+                    KdNode::insert_sorted(&mut best_queue, (parent, distance(&origin, point)));
+                    // 4.b. Check if there could be better points on the other side of the parent
+                    // This means check if the radius extends over the parent's split plane
+                    // 4.b.i. Check if the radius extends over the parent's split plane
+                    let (split_plane, split_plane_value, origin_value) = match parent {
+                        Node {
+                            dim: Dim::X, point, ..
+                        } => (Dim::X, point.x.into(), origin.x.into()),
+                        Node {
+                            dim: Dim::Y, point, ..
+                        } => (Dim::Y, point.y.into(), origin.y.into()),
+                        _ => panic!("Higher dimensions not implemented"),
+                    };
+
+
+
+                    // parents.push(parent);
+                    // parents.push(other_side);
+
+                }
+            }
+        }
+
+        best_queue.retain(|(_, dist)| *dist <= radius);
+        return best_queue
+            .iter()
+            .map(|(node, _)| match node {
+                Node { point, .. } => point.clone(),
+                _ => panic!("Empty node in best queue"),
+            })
+            .collect();
+    }
+
+    fn drill_down(&self, origin: Point<T>) -> Vec<&KdNode<T>> {
+        let mut parents: Vec<&KdNode<T>> = Vec::new();
+        let mut best_node: &KdNode<T> = self;
+        while let Node {
+            point,
+            left,
+            right,
+            dim,
+        } = best_node
+        {
+            parents.push(best_node);
+            if *left == Box::new(Empty) && *right == Box::new(Empty) {
+                break;
+            }
+
+            match point.cmp(&origin, dim) {
+                Ordering::Less => best_node = left,
+                _ => best_node = right,
+            }
+        }
+        return parents
+    }
+
+    fn insert_sorted<'a>(points: &mut Vec<(&'a KdNode<T>, f64)>, point: (&'a KdNode<T>, f64)) {
+        let mut index: usize = 0;
+        for (i, (_, dist)) in points.iter().enumerate() {
+            if *dist < point.1 {
+                index = i + 1;
+            }
+        }
+        points.insert(index, point);
+    }
+
+    fn build(points: Vec<Point<T>>) -> Self {
+        KdNode::_build(points, 1)
+    }
+
+    fn _build(points: Vec<Point<T>>, depth: usize) -> Self {
         // Increment the dimension
         let next_depth: usize = depth + 1;
 
@@ -121,20 +181,31 @@ impl<T: PartialEq + PartialOrd + Clone> KdNode<T> {
         let axis = Dim::from_depth(next_depth);
 
         // Get Median
-        let (median, left, right): (Point<T>, Vec<Point<T>>, Vec<Point<T>>)
-            = KdNode::_split_on_median(points, &axis);
+        let (median, left, right): (Point<T>, Vec<Point<T>>, Vec<Point<T>>) =
+            KdNode::split_on_median(points, &axis);
 
         Node {
             point: median,
             dim: axis,
-            left: Box::from(Self::build(left, next_depth)),
-            right: Box::from(Self::build(right, next_depth)),
+            left: Box::from(Self::_build(left, next_depth)),
+            right: Box::from(Self::_build(right, next_depth)),
         }
     }
 
-    fn _split_on_median(mut points: Vec<Point<T>>, axis: &Dim) -> (Point<T>, Vec<Point<T>>, Vec<Point<T>>) {
+    /// Split the points into two vectors based on the median
+    ///
+    /// The median is chosen based on the axis and returned along with
+    /// two separate vectors of points, the left and right of the median.
+    fn split_on_median(
+        mut points: Vec<Point<T>>,
+        axis: &Dim,
+    ) -> (Point<T>, Vec<Point<T>>, Vec<Point<T>>) {
         points.sort_by(|a: &Point<T>, b: &Point<T>| a.cmp(&b, &axis));
-        let median_index: usize = if points.len() % 2 == 0 { points.len() / 2 - 1 } else { points.len() / 2 };
+        let median_index: usize = if points.len() % 2 == 0 {
+            points.len() / 2 - 1
+        } else {
+            points.len() / 2
+        };
         let median: Point<T> = points[median_index].clone();
         let right: Vec<Point<T>> = points.drain(..median_index).collect();
         let left: Vec<Point<T>> = points.drain(1..).collect();
