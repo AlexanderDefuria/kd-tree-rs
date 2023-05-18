@@ -1,8 +1,13 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [package]
 name = "kd-tree-rs"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
+authors = ["Alexander De Furia <defuria.alexander@gmail.com>"]
+homepage = "https://github.com/AlexanderDefuria/kd-tree-rs"
+repository = "https://github.com/AlexanderDefuria/kd-tree-rs"
+license = "MIT"
+license-file = "LICENSE"
+readme = "README.md"
+description = "A Rust implementation of a k-d tree."
+publish = false

@@ -8,7 +8,7 @@ use crate::dim::Dim;
 use crate::point::{distance, Point};
 use crate::KdNode::{Empty, Node};
 use std::cmp::Ordering;
-use std::ops::{Add, Deref, Mul, Sub};
+use std::ops::{Add, Mul, Sub};
 
 trait KDT: PartialEq + PartialOrd + Copy + Mul + Sub + Add + Into<f64> {}
 impl<T> KDT for T where
@@ -75,6 +75,8 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
 
     /// Find the nearest neighbors to the origin point
     fn nearest_neighbor<'a>(&self, origin: Point<T>, radius: f64) -> Vec<Point<T>> {
+        assert!(radius >= 0.0, "Radius must be positive");
+
         let mut best_queue: Vec<(&KdNode<T>, f64)> = Vec::new();
         let mut parent_queue: Vec<&KdNode<T>> = self.drill_down(origin);
         let deepest: &KdNode<T> = parent_queue.get(0).unwrap();
@@ -123,6 +125,27 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
                         .find(|(a, _)| *a == side_node.as_ref())
                         .is_some()
                     {
+                        // Check if the radius actually overlaps the node children.
+                        match side_node.as_ref() {
+                            Empty => {}
+                            Node { point, .. } => {
+                                match dim {
+                                    Dim::X
+                                    if (origin.x.into() + radius > point.x.into()
+                                        && origin.x.into() < point.x.into())
+                                        || (origin.x.into() - radius < point.x.into()
+                                        && origin.x.into() > point.x.into()) => {}
+                                    Dim::Y
+                                    if (origin.y.into() + radius > point.y.into()
+                                        && origin.y.into() < point.y.into())
+                                        || (origin.y.into() - radius < point.y.into()
+                                        && origin.y.into() > point.y.into()) => {}
+                                    _ => {
+                                        continue;
+                                    }
+                                }
+                            },
+                        }
 
                         parent_queue.push(side_node.as_ref());
                         let temp =
@@ -232,7 +255,7 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
         } else {
             points.len() / 2
         };
-        let median: Point<T> = points[median_index].clone();
+        let median: Point<T> = points[median_index];
         let right: Vec<Point<T>> = points.drain(..median_index).collect();
         let left: Vec<Point<T>> = points.drain(1..).collect();
         (median, left, right)
