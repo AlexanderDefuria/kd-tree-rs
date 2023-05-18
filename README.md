@@ -26,12 +26,12 @@ simulation is in progress. I plan to continue to work on this project as I learn
 The performance of the KD Tree is not yet optimized. I plan to optimize the performance once I have implemented all of the features. 
 The current performance was taken from `rustup run nightly cargo bench` and is as follows:
 
-|  Size  | Build Tree<br/>`O(n log n)` | Find all points within a radius<br/>`O(n log n)` | Find nearest neighbor<br/>`O(log n)` | Insert<br/>`O(1)` |
-|:------:|:---------------------------:|:------------------------------------------------:|:------------------------------------:|-------------------|
-| 10000  |       `5,798,8 84 ns`       |                 `4,167,605 n s`                  |                                      |                   |           
-| 10000  |        `0.005799 s`         |                   `0.004176 s`                   |                                      |                   |           
-| 100000 |       `89,055,903 ns`       |                 `473,910,975 ns`                 |                                      |                   |           
-| 100000 |         `0.05799 s`         |                    `0.4176 s`                    |                                      |                   |
+|  Size  |         Build Tree<br/>`O(n)`         | Find all points within a radius<br/>`O(n log n)` | Find nearest neighbor<br/>`O(log n)` | Insert<br/>`O(1)` |
+|:------:|:-------------------------------------:|:------------------------------------------------:|:------------------------------------:|-------------------|
+| 10000  |            `5,798,8 84 ns`            |                 `4,167,605 n s`                  |                                      |                   |           
+| 10000  |             `0.005799 s`              |                   `0.004176 s`                   |                                      |                   |           
+| 100000 |            `89,055,903 ns`            |                 `473,910,975 ns`                 |                                      |                   |           
+| 100000 |              `0.05799 s`              |                    `0.4176 s`                    |                                      |                   |
 
 ## Usage - TODO
 Publishing is a WIP
@@ -45,8 +45,7 @@ Each alternating level of the tree is split by a different dimension.
 The root node is split by the first dimension, the children of the root node are split by the second dimension,
 this is typically the x and y dimensions in a 2D space. 3D space would be split by x, y, and z dimensions.
 
-<img src="https://file.notion.so/f/s/15611bfa-6330-4686-b5db-d0509f2ad4b9/Untitled.png?id=bf8bbcc5-e466-4580-8424-747cd4874480&table=block&spaceId=2f85f1a3-8655-4f22-9bbf-94a37faa948d&expirationTimestamp=1684512561225&signature=OpplJlJj06lbknuvVPGstj9D0Tfe4qmf7cEx3VMgH2U&downloadName=Untitled.png" alt="Image" style="width:33%">
-<img src="https://yasenh.github.io/post/kd-tree/1.png" alt="Image" style="width:66%;">
+<img src="https://file.notion.so/f/s/15611bfa-6330-4686-b5db-d0509f2ad4b9/Untitled.png?id=bf8bbcc5-e466-4580-8424-747cd4874480&table=block&spaceId=2f85f1a3-8655-4f22-9bbf-94a37faa948d&expirationTimestamp=1684512561225&signature=OpplJlJj06lbknuvVPGstj9D0Tfe4qmf7cEx3VMgH2U&downloadName=Untitled.png" alt="Image" style="width:33%"><img src="https://yasenh.github.io/post/kd-tree/1.png" alt="Image" style="width:66%;">
 
 
 ## Contributing
