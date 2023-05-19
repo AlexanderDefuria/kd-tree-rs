@@ -111,7 +111,7 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
                 left,
                 right,
                 point,
-                dim,
+                ..
             } => {
                 // Add node point if in range.
                 let dis = distance(&origin, point);
@@ -127,24 +127,12 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
                     {
                         // Check if the radius actually overlaps the node children.
                         match side_node.as_ref() {
-                            Empty => {}
-                            Node { point, .. } => {
-                                match dim {
-                                    Dim::X
-                                    if (origin.x.into() + radius > point.x.into()
-                                        && origin.x.into() < point.x.into())
-                                        || (origin.x.into() - radius < point.x.into()
-                                        && origin.x.into() > point.x.into()) => {}
-                                    Dim::Y
-                                    if (origin.y.into() + radius > point.y.into()
-                                        && origin.y.into() < point.y.into())
-                                        || (origin.y.into() - radius < point.y.into()
-                                        && origin.y.into() > point.y.into()) => {}
-                                    _ => {
-                                        continue;
-                                    }
+                            Node { point, dim, .. } => {
+                                if !point.in_radius(&origin, dim, radius) {
+                                    continue;
                                 }
                             },
+                            _ => {}
                         }
 
                         parent_queue.push(side_node.as_ref());

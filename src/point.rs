@@ -9,12 +9,29 @@ pub(crate) struct Point<T: PartialEq> {
     pub(crate) y: T,
 }
 
-impl<T: PartialEq + PartialOrd> Point<T> {
+impl<T: PartialEq + PartialOrd + Into<f64> + Copy> Point<T> {
     pub(crate) fn gt(&self, rs: &Point<T>, dim: &Dim) -> bool {
         match dim {
             Dim::X => self.x > rs.x,
             Dim::Y => self.y > rs.y,
         }
+    }
+
+    pub(crate) fn in_radius(&self, rs: &Point<T>, dim: &Dim, radius: f64) -> bool {
+        let origin: &T = match dim {
+            Dim::X => &self.x,
+            Dim::Y => &self.y,
+        };
+
+        let point: &T = match dim {
+            Dim::X => &rs.x,
+            Dim::Y => &rs.y,
+        };
+
+        let origin: f64 = (*origin).into();
+        let point: f64 = (*point).into();
+
+        return (origin + radius > point && origin < point) || (origin - radius < point && origin > point);
     }
 
     pub(crate) fn cmp(&self, rs: &Point<T>, dim: &Dim) -> Ordering {
