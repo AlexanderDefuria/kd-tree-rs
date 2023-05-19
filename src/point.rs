@@ -31,13 +31,13 @@ impl<T: PartialEq + PartialOrd + Into<f64> + Copy> Point<T> {
         let origin: f64 = (*origin).into();
         let point: f64 = (*point).into();
 
-        return (origin + radius > point && origin < point) || (origin - radius < point && origin > point);
+        (origin + radius > point && origin < point) || (origin - radius < point && origin > point)
     }
 
     pub(crate) fn cmp(&self, rs: &Point<T>, dim: &Dim) -> Ordering {
         let ls_value: &T = self.get_dim_value(dim);
         let rs_value: &T = rs.get_dim_value(dim);
-        ls_value.partial_cmp(&rs_value).unwrap()
+        ls_value.partial_cmp(rs_value).unwrap()
     }
 
     pub(crate) fn get_dim_value(&self, dim: &Dim) -> &T {

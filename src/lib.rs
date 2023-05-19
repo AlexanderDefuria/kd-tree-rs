@@ -101,6 +101,13 @@ pub enum KdNode<T: KDT> {
     },
 }
 
+impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::Debug> Default for KdNode<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::Debug> KdNode<T> {
     /// Create a new empty tree
     pub fn new() -> Self {
@@ -156,7 +163,7 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
     /// This will return a vector of points that are within the radius of the origin point.
     /// The radius is inclusive so if a point is exactly on the radius it will be included.
     ///
-    pub fn nearest_neighbor<'a>(&self, origin: Point<T>, radius: f64) -> Vec<Point<T>> {
+    pub fn nearest_neighbor(&self, origin: Point<T>, radius: f64) -> Vec<Point<T>> {
         assert!(radius >= 0.0, "Radius must be positive");
 
         let mut best_queue: Vec<(&KdNode<T>, f64)> = Vec::new();
@@ -178,7 +185,7 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
     /// Insert a new item into the tree
     ///
     /// This is the same as `insert` but takes a `Point` instead of `x` and `y`
-    pub fn nearest_neighbor_x_y<'a>(&self, x: T, y: T, radius: f64) -> Vec<Point<T>> {
+    pub fn nearest_neighbor_x_y(&self, x: T, y: T, radius: f64) -> Vec<Point<T>> {
         self.nearest_neighbor(Point { x, y }, radius)
     }
 
@@ -186,7 +193,7 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
     ///
     /// This will return a vector of points that are within the radius of the origin point.
     /// This is the same as `nearest_neighbor` but will only return the `max` number of points.
-    pub fn n_nearest_neighbor<'a>(&self, origin: Point<T>, max: usize) -> Vec<Point<T>> {
+    pub fn n_nearest_neighbor(&self, origin: Point<T>, max: usize) -> Vec<Point<T>> {
         let mut best_queue: Vec<(&KdNode<T>, f64)> = Vec::new();
         let mut parent_queue: Vec<&KdNode<T>> = self.drill_down(origin);
         let deepest: &KdNode<T> = parent_queue.get(0).unwrap();
@@ -241,18 +248,13 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
                 }
 
                 for side_node in [left, right] {
-                    if !best_queue.iter()
-                        .find(|(a, _)| *a == side_node.as_ref())
-                        .is_some()
+                    if !best_queue.iter().any(|(a, _)| *a == side_node.as_ref())
                     {
                         // Check if the radius actually overlaps the node children.
-                        match side_node.as_ref() {
-                            Node { point, dim, .. } => {
-                                if !point.in_radius(&origin, dim, radius) {
-                                    continue;
-                                }
-                            },
-                            _ => {}
+                        if let Node { point, dim, .. } = side_node.as_ref() {
+                            if !point.in_radius(&origin, dim, radius) {
+                                continue;
+                            }
                         }
 
                         parent_queue.push(side_node.as_ref());
@@ -299,14 +301,14 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
                 _ => best_node = right,
             }
         }
-        return parents;
+        parents
     }
 
     /// Insert a point into a sorted list if it is not already in the list.
     fn insert_sorted<'a>(
         points: &mut Vec<(&'a KdNode<T>, f64)>,
         point: (&'a KdNode<T>, f64),
-    ) -> () {
+    ) {
         let mut index: usize = 0;
         for (i, (node, dist)) in points.iter().enumerate() {
             if *dist < point.1 {
@@ -332,7 +334,7 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
             return Empty;
         } else if points.len() == 1 {
             return Node {
-                point: points[0].clone(),
+                point: points[0],
                 dim: Dim::from_depth(next_depth),
                 left: Box::new(Empty),
                 right: Box::new(Empty),
@@ -362,7 +364,7 @@ impl<T: KDT + Mul<Output = T> + Sub<Output = T> + Add<Output = T> + std::fmt::De
         mut points: Vec<Point<T>>,
         axis: &Dim,
     ) -> (Point<T>, Vec<Point<T>>, Vec<Point<T>>) {
-        points.sort_by(|a: &Point<T>, b: &Point<T>| a.cmp(&b, &axis));
+        points.sort_by(|a: &Point<T>, b: &Point<T>| a.cmp(b, axis));
         let median_index: usize = if points.len() % 2 == 0 {
             points.len() / 2 - 1
         } else {
