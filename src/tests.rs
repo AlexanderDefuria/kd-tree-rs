@@ -33,10 +33,10 @@ mod tests {
         assert_eq!(node, Empty);
 
         // Tree Root
-        node.insert(Point { x: 1, y: 1 });
+        node.insert(1, 1);
         // Second level of tree (sorted on Y)
-        node.insert(Point { x: 2, y: 2 });
-        node.insert(Point { x: 2, y: -12 });
+        node.insert_point(Point { x: 2, y: 2 });
+        node.insert_point(Point { x: 2, y: -12 });
         assert_eq!(
             node,
             Node {
@@ -163,6 +163,14 @@ mod tests {
         for point in TEST_POINTS_F64.to_vec() {
             assert!(nearest.contains(&point))
         }
+
+        nearest = node.n_nearest_neighbor(origin, 4);
+        for point in nearest.clone() {
+            assert!(TEST_POINTS_F64.to_vec().contains(&point))
+        }
+        assert_eq!(nearest.len(), 4);
+
+
     }
 
     #[test]

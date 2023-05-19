@@ -4,9 +4,9 @@ use std::cmp::Ordering;
 use std::ops::{Add, Mul, Sub};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub(crate) struct Point<T: PartialEq> {
-    pub(crate) x: T,
-    pub(crate) y: T,
+pub struct Point<T: PartialEq> {
+    pub x: T,
+    pub y: T,
 }
 
 impl<T: PartialEq + PartialOrd + Into<f64> + Copy> Point<T> {
@@ -48,7 +48,7 @@ impl<T: PartialEq + PartialOrd + Into<f64> + Copy> Point<T> {
     }
 }
 
-pub(crate) fn distance<T>(ls: &Point<T>, rs: &Point<T>) -> f64
+pub fn distance<T>(ls: &Point<T>, rs: &Point<T>) -> f64
 where
     T: Mul<Output = T>
         + Sub<Output = T>

@@ -9,4 +9,4 @@ repository = "https://github.com/AlexanderDefuria/kd-tree-rs"
 license = "MIT"
 readme = "README.md"
 description = "A Rust implementation of a k-d tree."
-publish = false
+publish = true

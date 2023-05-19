@@ -9,15 +9,16 @@ This is an under development implementation of a KD Tree in Rust.
 Below is a list of features that are currently implemented and features that are planned to be implemented.
 
 * [x] Build Tree
-* [x] Find all points within a radius
-* [x] Find nearest neighbor
-* [x] Insert new point
-* [ ] Find k nearest neighbors _(In Progress)_
-* [ ] Delete point
-* [ ] Re-Balance tree
-* [ ] Serialize tree
-* [ ] Publish crate
+* [x] Find All Points Within A Radius
+* [x] Find Nearest Neighbor
+* [x] Insert New Point
+* [x] Find **N** Nearest Neighbors
+* [ ] Delete Point
+* [ ] Re-Balance Tree
+* [ ] Serialize Tree
+* [ ] Publish Crate
 * [ ] Add **K** dimensions **(Currently only 2D)**
+* [x] Add Examples
 
 This was developed initially as a way to learn Rust and to implement a KD Tree for a boids simulation although the
 simulation is in progress. I plan to continue to work on this project as I learn more about Rust and as I have time.
@@ -38,6 +39,16 @@ Publishing is a WIP
 
 ```rust
 use kd_tree::KDTree;
+
+fn main() {
+    let mut node: KdNode<i32> = KdNode::new();
+    // Tree Root
+    node.insert(1, 1);
+    node.insert(2, 2);
+    node.insert(2, -12);
+
+    assert_eq!(node.nearest_neighbor(Point{x: 1, y: 1}, 1.0), vec![Point{x: 1, y: 1}]);
+}
 ```
 Below is a diagram showing how the KD Tree is structured. 
 The KD Tree is a binary tree where each node is a point in the k-dimensional space.

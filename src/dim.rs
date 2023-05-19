@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq)]
-pub(crate) enum Dim {
+pub enum Dim {
     X,
     Y,
 }
